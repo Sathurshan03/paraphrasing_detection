@@ -44,6 +44,16 @@ class DatasetParaphrase:
         return len(self.data)
 
 
+    def get_datasets(self):
+        """Return raw Dataset objects for use with DistributedSampler in DDP."""
+        return (
+            DataServer(self.train_data, self.facebook_model),
+            DataServer(self.val_data,   self.facebook_model),
+            DataServer(self.test_data,  self.facebook_model),
+        )
+
+
+
     def get_data_loaders(self, batch_size, shuffle=True, num_workers=0, pin_memory=False):
         train_loader = DataLoader(DataServer(self.train_data, self.facebook_model), batch_size=batch_size,
                                   shuffle=shuffle, num_workers=num_workers, pin_memory=pin_memory, collate_fn=DataServer.collate_fn)
