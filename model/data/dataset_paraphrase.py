@@ -46,13 +46,13 @@ class DatasetParaphrase:
 
     def get_data_loaders(self, batch_size, shuffle=True, num_workers=0, pin_memory=False):
         train_loader = DataLoader(DataServer(self.train_data, self.facebook_model), batch_size=batch_size,
-                                  shuffle=shuffle, num_workers=num_workers, pin_memory=pin_memory)
+                                  shuffle=shuffle, num_workers=num_workers, pin_memory=pin_memory, collate_fn=DataServer.collate_fn)
 
         val_loader = DataLoader(DataServer(self.val_data, self.facebook_model), batch_size=batch_size,
-                                shuffle=shuffle, num_workers=num_workers, pin_memory=pin_memory)
+                                shuffle=shuffle, num_workers=num_workers, pin_memory=pin_memory, collate_fn=DataServer.collate_fn)
 
         test_loader = DataLoader(DataServer(self.test_data, self.facebook_model), batch_size=batch_size,
-                                 shuffle=shuffle, num_workers=num_workers, pin_memory=pin_memory)
+                                 shuffle=shuffle, num_workers=num_workers, pin_memory=pin_memory, collate_fn=DataServer.collate_fn)
 
         return train_loader, val_loader, test_loader
 

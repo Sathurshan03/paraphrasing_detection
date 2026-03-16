@@ -28,13 +28,31 @@ class RNN_FastText(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
 
-    def forward(self, sent_1_embedding, sent_2_embedding):
+    def forward(self, sent_1_embedding, sent_2_embedding, mask_1=None, mask_2=None):
 
-        output_bilstm_1, h_f, h_b = self.lstm(sent_1_embedding)
-        output_bilstm_2, h_f, h_b = self.lstm(sent_2_embedding)
+        output_bilstm_1, _, _ = self.lstm(sent_1_embedding, mask=mask_1)
+        output_bilstm_2, _, _ = self.lstm(sent_2_embedding, mask=mask_2)
 
-        # We take the last hidden state of both the forward and backward lstm
-        output_bilstm = torch.cat((output_bilstm_1[-1], output_bilstm_2[-1]), dim=0)
+        # output_bilstm_1: (seq_len, batch_size, hidden_size*2)
+        # We take the output at the last *real* token per sample (not the last padded step).
+        if mask_1 is not None:
+            # lengths_1: (batch_size,), fwd_idx_1: index of last real token per sample
+            lengths_1 = mask_1.sum(dim=1).long()
+            fwd_idx_1 = (lengths_1 - 1).clamp(min=0)
+            last_out_1 = output_bilstm_1[fwd_idx_1, torch.arange(sent_1_embedding.size(0), device=sent_1_embedding.device)]
+        else:
+            last_out_1 = output_bilstm_1[-1]  # fallback for unbatched / no-mask usage
+
+        if mask_2 is not None:
+            lengths_2 = mask_2.sum(dim=1).long()
+            fwd_idx_2 = (lengths_2 - 1).clamp(min=0)
+            last_out_2 = output_bilstm_2[fwd_idx_2, torch.arange(sent_2_embedding.size(0), device=sent_2_embedding.device)]
+        else:
+            last_out_2 = output_bilstm_2[-1]
+
+        # Concatenate the two sentence representations per sample: (batch_size, 800)
+        # dim=1 keeps batch dimension intact; dim=0 would wrongly stack all rows together
+        output_bilstm = torch.cat((last_out_1, last_out_2), dim=1)
 
         output_fcn = self.layer_1(output_bilstm)
         output_fcn = self.relu_1(output_fcn)
