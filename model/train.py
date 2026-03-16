@@ -2,7 +2,7 @@ from .arch.RNN_FastText import RNN_FastText
 import torch
 
 import torch.optim as optim
-import torch.nn.functional as F
+import matplotlib.pyplot as plt
 import torch.nn as nn
 from tqdm import tqdm
 
@@ -95,3 +95,22 @@ if __name__ == "__main__":
     criterion = nn.HuberLoss()
 
     loss_epochs, val_losses = train(train_loader, val_loader, model, optimizer, criterion, device, epochs=50)
+
+    # save these to file
+
+    with open('loss_epochs.txt', 'w') as f:
+        for epoch in loss_epochs:
+            f.write(f"{epoch}\n")
+
+    with open('val_losses.txt', 'w') as f:
+        for loss in val_losses:
+            f.write(f"{loss}\n")
+
+    # Plot and save to file
+
+    plt.plot(loss_epochs, label='Training Loss')
+    plt.plot(val_losses, label='Validation Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.savefig('loss_plot.png')
