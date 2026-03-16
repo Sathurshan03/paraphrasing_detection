@@ -1,6 +1,8 @@
 from torch.utils.data import DataLoader
 from gensim.models.fasttext import load_facebook_vectors
 from .data_server import DataServer
+from gensim.models import KeyedVectors
+from model.params import DEBUG
 
 
 class DatasetParaphrase:
@@ -22,7 +24,8 @@ class DatasetParaphrase:
         self.do_data_split()
 
         print("Loading Facebook Model")
-        self.facebook_model = load_facebook_vectors('crawl-300d-2M-subword.bin')
+        self.facebook_model = KeyedVectors.load_word2vec_format('wiki-news-300d-1M-subword.vec',limit=50_000) if DEBUG\
+            else load_facebook_vectors('crawl-300d-2M-subword.bin')
         print("Done Loading Facebook Model")
 
     def do_data_split(self):
