@@ -140,12 +140,12 @@ if __name__ == "__main__":
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         dataset = DatasetParaphrase('dataset.csv')
-        train_loader, val_loader, test_loader = dataset.get_data_loaders(batch_size=8, num_workers=6, pin_memory=True)
+        train_loader, val_loader, test_loader = dataset.get_data_loaders(batch_size=32, num_workers=6, pin_memory=True)
 
         model = RNN_FastText()
         model.to(device)
 
-        optimizer = optim.Adam(model.parameters(), lr=0.001)
+        optimizer = optim.Adam(model.parameters(), lr=0.004)
         criterion = nn.HuberLoss()
 
         loss_epochs, val_losses = train(train_loader, val_loader, model, optimizer, criterion, device, epochs=50)
