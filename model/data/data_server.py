@@ -22,6 +22,8 @@ class DataServer(Dataset):
                 embedding[i] = torch.tensor(self.fasttext_model[token].tolist(), dtype=torch.float)
             else:
                 embedding[i] = torch.zeros(self.embedding_dim)  # OOV words get zero vector
+        if len(tokens) == 0:
+            embedding = torch.zeros(1, self.embedding_dim)
 
         return embedding
 
