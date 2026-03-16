@@ -24,13 +24,15 @@ def train(data_loader, val_data_loader, model_l, optimizer_l, criterion_l, devic
         loss_epoch = 0
         tqdm_loader = tqdm(data_loader)
         for batch_index, batch in enumerate(tqdm_loader):
-            sentence1 = batch['sentence1'].squeeze(0).to(device_l)
-            sentence2 = batch['sentence2'].squeeze(0).to(device_l)
-            labels = torch.tensor([float(l) for l in batch['label']], device=device_l)
+            sentence1 = batch['sentence1'].to(device_l)        # (batch, seq, 300)
+            sentence2 = batch['sentence2'].to(device_l)
+            mask_1 = batch['sentence1_mask'].to(device_l)      # (batch, seq) bool
+            mask_2 = batch['sentence2_mask'].to(device_l)
+            labels = batch['label'].float().to(device_l)       # (batch,)
 
             optimizer_l.zero_grad()
 
-            outputs = model_l(sentence1, sentence2).squeeze(0)
+            outputs = model_l(sentence1, sentence2, mask_1=mask_1, mask_2=mask_2).squeeze(-1)
 
             loss = criterion_l(outputs, labels)
             loss_epoch += loss.item()
@@ -61,11 +63,13 @@ def validate(val_loader_l, model_l, criterion_l, device_l):
     val_loss = 0
     with torch.no_grad():
         for batch_index, batch in enumerate(tqdm(val_loader_l)):
-            sentence1 = batch['sentence1'].squeeze(0).to(device_l)
-            sentence2 = batch['sentence2'].squeeze(0).to(device_l)
-            labels = torch.tensor([float(l) for l in batch['label']], device=device_l)
+            sentence1 = batch['sentence1'].to(device_l)
+            sentence2 = batch['sentence2'].to(device_l)
+            mask_1 = batch['sentence1_mask'].to(device_l)
+            mask_2 = batch['sentence2_mask'].to(device_l)
+            labels = batch['label'].float().to(device_l)
 
-            outputs = model_l(sentence1, sentence2).squeeze(0)
+            outputs = model_l(sentence1, sentence2, mask_1=mask_1, mask_2=mask_2).squeeze(-1)
             loss = criterion_l(outputs, labels)
             val_loss += loss.item()
 
@@ -82,7 +86,7 @@ if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     dataset = DatasetParaphrase('dataset.csv')
-    train_loader, val_loader, test_loader = dataset.get_data_loaders(batch_size=1, num_workers=6, pin_memory=True)
+    train_loader, val_loader, test_loader = dataset.get_data_loaders(batch_size=8, num_workers=6, pin_memory=True)
 
     model = RNN_FastText()
     model.to(device)

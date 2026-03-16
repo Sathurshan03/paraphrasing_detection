@@ -70,23 +70,29 @@ class BiLSTM(nn.Module):
         self.forward_lstm = LSTM(input_size, hidden_size)
         self.backward_lstm = LSTM(input_size, hidden_size)
 
-    def forward(self, x):
-
-        # Handle both 2D and 3D input
+    def forward(self, x, mask=None):
+        """
+        Args:
+            x:    (batch_size, seq_len, input_size)  — batch-first, from collate_fn
+                  OR (seq_len, input_size)            — single sample, no batch dim
+            mask: (batch_size, seq_len) bool tensor, True = real token, False = padding.
+                  When provided, the final hidden states h_f / h_b are taken from the
+                  last *real* token position per sample, not the last padded position.
+        """
         if x.dim() == 2:
-            # (seq_len, input_size) - single sentence without batch dimension
+            # Single sample: (seq_len, input_size) — no batch dimension
             seq_len_l = x.shape[0]
-            batch_size_l = None  # indicates no batch dimension
-            forward_outputs = []
-            backward_outputs = []
+            batch_size_l = None
         else:
-            # (seq_len, batch_size, input_size)
+            # Batch: collate_fn produces (batch_size, seq_len, input_size)
+            # Permute to (seq_len, batch_size, input_size) for the step-wise loop
+            x = x.permute(1, 0, 2)
             seq_len_l, batch_size_l, _ = x.shape
-            forward_outputs = []
-            backward_outputs = []
 
-        # Forward pass
-        # Initialize hidden and cell states
+        forward_outputs = []
+        backward_outputs = []
+
+        # Initialise hidden and cell states
         if batch_size_l is None:
             h_f = torch.zeros(self.hidden_size, device=x.device)
             c_f = torch.zeros(self.hidden_size, device=x.device)
@@ -100,24 +106,31 @@ class BiLSTM(nn.Module):
 
         # FORWARD PASS: process sequence left to right
         for t in range(seq_len_l):
-            x_t = x[t]  # Get input at time t
-            h_f, c_f = self.forward_lstm(x_t, h_f, c_f)
+            h_f, c_f = self.forward_lstm(x[t], h_f, c_f)
             forward_outputs.append(h_f.unsqueeze(0))
 
         # BACKWARD PASS: process sequence right to left
         for t in range(seq_len_l - 1, -1, -1):
-            x_t = x[t]  # Get input at time t
-            h_b, c_b = self.backward_lstm(x_t, h_b, c_b)
+            h_b, c_b = self.backward_lstm(x[t], h_b, c_b)
             backward_outputs.insert(0, h_b.unsqueeze(0))
 
-        # Concatenate forward and backward outputs at each time step
-        forward_outputs = torch.cat(forward_outputs,
-                                    dim=0)  # (seq_len, hidden_size) or (seq_len, batch_size, hidden_size)
-        backward_outputs = torch.cat(backward_outputs,
-                                     dim=0)  # (seq_len, hidden_size) or (seq_len, batch_size, hidden_size)
+        # (seq_len, [batch_size,] hidden_size)
+        forward_outputs = torch.cat(forward_outputs, dim=0)
+        backward_outputs = torch.cat(backward_outputs, dim=0)
 
-        # Concatenate bidirectional outputs: (seq_len, hidden_size*2) or (seq_len, batch_size, hidden_size*2)
+        # (seq_len, [batch_size,] hidden_size*2)
         output = torch.cat([forward_outputs, backward_outputs], dim=-1)
+
+        # Extract final hidden states at the last *real* token per sample.
+        # Without this, h_f / h_b reflect the last padded (zero) position.
+        if mask is not None and batch_size_l is not None:
+            # lengths: (batch_size,) — number of real tokens per sample
+            lengths = mask.sum(dim=1).long()  # e.g. [7, 12, 5, ...]
+            # Forward: take hidden state at position (length - 1) for each sample
+            fwd_idx = (lengths - 1).clamp(min=0)          # (batch_size,)
+            h_f = forward_outputs[fwd_idx, torch.arange(batch_size_l, device=x.device)]
+            # Backward: the first real backward step is at position 0 in the sequence
+            h_b = backward_outputs[0, torch.arange(batch_size_l, device=x.device)]
 
         return output, h_f, h_b
 
