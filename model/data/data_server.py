@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 from gensim.models import FastText
 from gensim.utils import simple_preprocess
 
-
+from model.params import DEBUG
 
 class DataServer(Dataset):
 
@@ -18,7 +18,11 @@ class DataServer(Dataset):
         tokens = simple_preprocess(sentence)
         embedding = torch.zeros(len(tokens), self.embedding_dim)
         for i, token in enumerate(tokens):
-            embedding[i] = torch.tensor(self.fasttext_model[token].tolist(), dtype=torch.float)
+            if token in self.fasttext_model:
+                embedding[i] = torch.tensor(self.fasttext_model[token].tolist(), dtype=torch.float)
+            else:
+                embedding[i] = torch.zeros(self.embedding_dim)  # OOV words get zero vector
+
         return embedding
 
     def __len__(self):

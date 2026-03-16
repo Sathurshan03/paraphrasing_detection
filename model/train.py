@@ -25,13 +25,13 @@ def train(data_loader, val_data_loader, model_l, optimizer_l, criterion_l, devic
         loss_epoch = 0
         tqdm_loader = tqdm(data_loader)
         for batch_index, batch in enumerate(tqdm_loader):
-            sentence1 = batch['sentence1'].to(device_l)
-            sentence2 = batch['sentence2'].to(device_l)
+            sentence1 = batch['sentence1'].squeeze(0).to(device_l)
+            sentence2 = batch['sentence2'].squeeze(0).to(device_l)
             labels = torch.tensor([float(l) for l in batch['label']], device=device_l)
 
             optimizer_l.zero_grad()
 
-            outputs = model_l(sentence1, sentence2).squeeze()
+            outputs = model_l(sentence1, sentence2).squeeze(0)
 
             loss = criterion_l(outputs, labels)
             loss_epoch += loss.item()
@@ -62,11 +62,11 @@ def validate(val_loader_l, model_l, criterion_l, device_l):
     val_loss = 0
     with torch.no_grad():
         for batch_index, batch in enumerate(tqdm(val_loader_l)):
-            sentence1 = batch['sentence1'].to(device_l)
-            sentence2 = batch['sentence2'].to(device_l)
+            sentence1 = batch['sentence1'].squeeze(0).to(device_l)
+            sentence2 = batch['sentence2'].squeeze(0).to(device_l)
             labels = torch.tensor([float(l) for l in batch['label']], device=device_l)
 
-            outputs = model_l(sentence1, sentence2).squeeze()
+            outputs = model_l(sentence1, sentence2).squeeze(0)
             loss = criterion_l(outputs, labels)
             val_loss += loss.item()
 
