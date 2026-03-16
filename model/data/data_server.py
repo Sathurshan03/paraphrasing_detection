@@ -9,7 +9,7 @@ class DataServer(Dataset):
 
     def __init__(self, data, fasttext_model):
         self.data = data
-        self.fasttext_model: FastText = fasttext_model
+        self.fasttext_model= fasttext_model
 
         # The fast text model is 300 dimensions
         self.embedding_dim = 300
@@ -18,7 +18,7 @@ class DataServer(Dataset):
         tokens = simple_preprocess(sentence)
         embedding = torch.zeros(len(tokens), self.embedding_dim)
         for i, token in enumerate(tokens):
-            embedding[i] = torch.tensor(self.fasttext_model.wv[token].tolist(), dtype=torch.float)
+            embedding[i] = torch.tensor(self.fasttext_model[token].tolist(), dtype=torch.float)
         return embedding
 
     def __len__(self):
