@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     # Our agreement score is based on the semantic score assigned by each annotater
 
-    #first assigned integer labels to each score
+    # first assigned integer labels to each score
 
     common_sentences.loc[common_sentences["Word Semantic Score_x"] == 0.0, "Word Semantic Score_x"] = 0
     common_sentences.loc[common_sentences["Word Semantic Score_y"] == 0.0, "Word Semantic Score_y"] = 0
