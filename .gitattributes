@@ -1,0 +1,2 @@
+model/dataset.csv filter=lfs diff=lfs merge=lfs -text
+model/crawl-300d-2M-subword.bin filter=lfs diff=lfs merge=lfs -text
