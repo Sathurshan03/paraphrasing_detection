@@ -13,13 +13,17 @@ class DatasetParaphrase:
                 if len(cols) == 3:
                     self.data.append((cols[0], cols[1], cols[2]))
 
+        print (f"Loaded {len(self.data)} data points")
+
         self.train_data = []
         self.val_data = []
         self.test_data = []
 
         self.do_data_split()
 
+        print("Loading Facebook Model")
         self.facebook_model = load_facebook_vectors('crawl-300d-2M-subword.bin')
+        print("Done Loading Facebook Model")
 
     def do_data_split(self):
         # we do 70/10/20 split
