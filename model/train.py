@@ -24,6 +24,7 @@ def setup_ddp(rank, world_size):
 
 
 def save_checkpoint(state, epoch, is_best, model_name):
+    os.makedirs("checkpoints", exist_ok=True)
     model_name = f"checkpoints/{model_name}_epoch_{epoch}.pth"
     torch.save(state, model_name)
     if is_best:
