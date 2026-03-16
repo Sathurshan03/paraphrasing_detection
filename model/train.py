@@ -1,4 +1,4 @@
-from arch.RNN_FastText import RNN_FastText
+from .arch.RNN_FastText import RNN_FastText
 import torch
 
 import torch.optim as optim
@@ -6,8 +6,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 from tqdm import tqdm
 
-from data.dataset_paraphrase import DatasetParaphrase
-from data.data_server import DataServer
+from .data.dataset_paraphrase import DatasetParaphrase
 
 def save_checkpoint(state, epoch, is_best, model_name):
     model_name = f"checkpoints/{model_name}_epoch_{epoch}.pth"

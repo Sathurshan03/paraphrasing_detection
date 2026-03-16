@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 from gensim.models import FastText
 from gensim.utils import simple_preprocess
 
-from model.params import DEBUG
+from ..params import DEBUG
 
 class DataServer(Dataset):
 
