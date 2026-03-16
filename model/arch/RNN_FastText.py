@@ -1,8 +1,8 @@
 import torch.nn as nn
 import torch
 
-from arch.LSTM import LSTM
-from arch.LSTM import BiLSTM
+from .LSTM import LSTM
+from .LSTM import BiLSTM
 
 class RNN_FastText(nn.Module):
 

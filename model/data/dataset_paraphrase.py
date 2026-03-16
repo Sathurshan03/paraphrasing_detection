@@ -2,7 +2,7 @@ from torch.utils.data import DataLoader
 from gensim.models.fasttext import load_facebook_vectors
 from .data_server import DataServer
 from gensim.models import KeyedVectors
-from model.params import DEBUG
+from ..params import DEBUG
 
 
 class DatasetParaphrase:
