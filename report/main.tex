@@ -17,6 +17,7 @@
 \usepackage{microtype}
 \usepackage{inconsolata}
 \usepackage{graphicx}
+\setcitestyle{numbers,square}
 
 % If the title and author information does not fit in the area allocated, uncomment the following
 %
@@ -74,22 +75,33 @@
 % \end{abstract}
 
 \section{Introduction}
-Jay
+Paraphrase detection is the task of determining whether two pieces of text express the same meaning, even if they use different words or sentence structures. This problem is useful in applications such as plagiarism detection, semantic search, duplicate question detection, and large-scale text processing. The task is challenging because surface-level similarity is often misleading: two sentences can share many words but mean different things, while two sentences with very different wording can still be semantically equivalent. As a result, an effective system must go beyond keyword matching and capture the underlying meaning of each sentence in context.
 
-Here, write a brief introduction to the problem you are solving. This can be adapted from your problem description and motivation from the original proposal. This should be around 0.25-0.5 pages.
+In this project, we study paraphrase detection as a regression problem. Given two tokenized English sentences, the model predicts a score between 0 and 1 that represents how strongly the sentences paraphrase each other. A low score indicates little semantic overlap, while a high score indicates that the two sentences communicate nearly the same idea. To support this task, we use a subset of the ParaNMT-50M dataset, which provides large numbers of sentence pairs with similarity scores. Our overall goal is to build and evaluate models that can learn both word-level similarity and deeper semantic relationships, allowing the system to assign reliable paraphrase scores to unseen sentence pairs.
 
 \section{Related Work}
-Jay
+Past work on paraphrase detection usually looks at the problem in two ways: either deciding if two sentences are paraphrases or giving them a similarity score. One of the best-known datasets in this area is the Microsoft Research Paraphrase Corpus \cite{dolan-brockett-2005}. A closely related area is semantic textual similarity (STS), where the goal is to predict how similar two sentences are on a scale instead of making a yes-or-no decision \cite{cer-etal-2017-semeval}. This is especially relevant to our project because we also treat the problem as score prediction. These works show that paraphrase detection is not just about matching words. Two sentences may use different wording and still mean the same thing.
 
-Here, talk about the related work you encountered for your approach. Cite at least 5 references. Refer to item 1. No one has done exactly your task? Write about the most similar thing you can find. This should be around 0.25-0.5 pages.
+Another important area of related work is sentence embeddings. Back-translated text has been used to create large paraphrase datasets for learning sentence representations \cite{wieting-etal-2017-learning}. ParaNMT-50M, which we use in this project, builds on that idea \cite{wieting-gimpel-2018-paranmt}. More recent methods use transformer models to create better sentence embeddings. Sentence-BERT made it easier to compare whole sentences using cosine similarity \cite{reimers-gurevych-2019-sentence}, and SimCSE further improved sentence representation quality using contrastive learning \cite{gao-etal-2021-simcse}. No previous paper matches our exact project setup, but these papers are the closest to what we are doing because they focus on paraphrase datasets, similarity scoring, and sentence-level meaning.
 
 \section{Dataset}
-Jay
+We use the ParaNMT-50M dataset for this project. Rather than creating new labels manually, we use the similarity score provided with each sentence pair as the supervision signal for training and evaluation. Each example contains two English sentences and a real-valued score between 0 and 1. Higher scores indicate that the two sentences are more semantically similar, while lower scores indicate weaker similarity. Since our task is formulated as a regression problem, this score is treated as the target value the model must predict.
 
-You should write about your dataset here, following the guidelines regarding item 2. This section may be 0.5-1 pages. Depending on your specific dataset, you may want to include subsections for the preprocessing, annotation, etc.
+Each row in the dataset contains three fields: sentence 1, sentence 2, and a score. This format directly matches the paraphrase scoring task because the model receives a pair of sentences as input and learns to predict a continuous similarity label. For example, sentence pairs with almost identical meaning receive scores close to 1.0, while pairs with weaker semantic overlap receive lower scores.
+
+To better understand the labels, we plotted a histogram using the first 1,000,000 rows of the dataset. The x-axis represents paraphrase scores from 0 to 1 using bins of width 0.01, and the y-axis shows the number of sentence pairs in each bin. As shown in Figure~\ref{fig:score-distribution}, the distribution is not uniform. Instead, the dataset is concentrated more heavily toward higher scores, and the largest spike occurs at 1.0. This suggests that highly similar sentence pairs appear much more frequently than weakly related ones in the sampled data.
+
+Because the labels are continuous rather than discrete classes, traditional class balance does not apply directly. However, the score distribution is still clearly imbalanced across the regression range. In particular, the upper score bins contain substantially more examples than many of the lower score bins. This means the dataset is skewed toward highly similar sentence pairs, which may affect model behavior during training and evaluation. For this reason, understanding the label distribution is important when interpreting performance and analyzing prediction errors.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{../score_distribution.png}
+    \caption{Distribution of paraphrase scores for the first 1,000,000 rows of ParaNMT-50M.}
+    \label{fig:score-distribution}
+\end{figure}
 
 \section{Features and Inputs}
-Jay
+Omar
 
 Describe any features you used for your model, or how your data was input to your model. Are you doing feature engineering or feature selection? Are you learning embeddings? Is it all part of one neural network? Refer to item 3. This may range from 0.25 pages to 0.5 pages.
 
@@ -121,6 +133,28 @@ Summarize your work briefly. Reflect on your implementation and areas for improv
 \section*{Team Contributions}
 
 Write in this section a few sentences describing the contributions of each team member. What did each member work on? Refer to item 8.
+
+\begin{thebibliography}{}
+
+\bibitem{dolan-brockett-2005}
+W. B. Dolan and C. Brockett, ``Automatically Constructing a Corpus of Sentential Paraphrases,'' in \textit{Proc. Third Int. Workshop on Paraphrasing (IWP2005)}, 2005.
+
+\bibitem{cer-etal-2017-semeval}
+D. Cer, M. Diab, E. Agirre, I. Lopez-Gazpio, and L. Specia, ``SemEval-2017 Task 1: Semantic Textual Similarity Multilingual and Crosslingual Focused Evaluation,'' in \textit{Proc. 11th Int. Workshop on Semantic Evaluation (SemEval-2017)}, 2017.
+
+\bibitem{wieting-etal-2017-learning}
+J. Wieting, J. Mallinson, and K. Gimpel, ``Learning Paraphrastic Sentence Embeddings from Back-Translated Bitext,'' in \textit{Proc. 2017 Conf. on Empirical Methods in Natural Language Processing}, 2017.
+
+\bibitem{wieting-gimpel-2018-paranmt}
+J. Wieting and K. Gimpel, ``ParaNMT-50M: Pushing the Limits of Paraphrastic Sentence Embeddings with Millions of Machine Translations,'' in \textit{Proc. 56th Annual Meeting of the Association for Computational Linguistics}, 2018.
+
+\bibitem{reimers-gurevych-2019-sentence}
+N. Reimers and I. Gurevych, ``Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks,'' in \textit{Proc. 2019 Conf. on Empirical Methods in Natural Language Processing and the 9th Int. Joint Conf. on Natural Language Processing}, 2019.
+
+\bibitem{gao-etal-2021-simcse}
+T. Gao, X. Yao, and D. Chen, ``SimCSE: Simple Contrastive Learning of Sentence Embeddings,'' in \textit{Proc. 2021 Conf. on Empirical Methods in Natural Language Processing}, 2021.
+
+\end{thebibliography}
 
 % \appendix
 
