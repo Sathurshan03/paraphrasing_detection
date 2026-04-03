@@ -79,4 +79,4 @@ class DataServer(Dataset):
             'sentence1_mask': sent1_mask,
             'sentence2_mask': sent2_mask,
             'label': labels,
-        }
+        }

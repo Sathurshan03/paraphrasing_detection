@@ -3,7 +3,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 
-dataset_path = Path(input("Enter the path to para-nmt-50m.txt: ").strip().strip('"'))
+dataset_path = Path("dataset.csv")
 scores = []
 
 with dataset_path.open("r", encoding="utf-8") as dataset_file:
@@ -11,7 +11,7 @@ with dataset_path.open("r", encoding="utf-8") as dataset_file:
         if len(scores) >= 1_000_000:
             break
 
-        parts = line.rstrip("\n").split("\t")
+        parts = line.rstrip("\n").split("~")
         if len(parts) < 3:
             continue
 
