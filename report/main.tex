@@ -18,6 +18,10 @@
 \usepackage{inconsolata}
 \usepackage{graphicx}
 \setcitestyle{numbers,square}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
 
 % If the title and author information does not fit in the area allocated, uncomment the following
 %
@@ -75,6 +79,7 @@
 % \end{abstract}
 
 \section{Introduction}
+
 Paraphrase detection is the task of determining whether two pieces of text express the same meaning, even if they use different words or sentence structures. This problem is useful in applications such as plagiarism detection, semantic search, duplicate question detection, and large-scale text processing. The task is challenging because surface-level similarity is often misleading: two sentences can share many words but mean different things, while two sentences with very different wording can still be semantically equivalent. As a result, an effective system must go beyond keyword matching and capture the underlying meaning of each sentence in context.
 
 In this project, we study paraphrase detection as a regression problem. Given two tokenized English sentences, the model predicts a score between 0 and 1 that represents how strongly the sentences paraphrase each other. A low score indicates little semantic overlap, while a high score indicates that the two sentences communicate nearly the same idea. To support this task, we use a subset of the ParaNMT-50M dataset, which provides large numbers of sentence pairs with similarity scores. Our overall goal is to build and evaluate models that can learn both word-level similarity and deeper semantic relationships, allowing the system to assign reliable paraphrase scores to unseen sentence pairs.
@@ -101,20 +106,251 @@ Because the labels are continuous rather than discrete classes, traditional clas
 \end{figure}
 
 \section{Features and Inputs}
-Omar
 
-Describe any features you used for your model, or how your data was input to your model. Are you doing feature engineering or feature selection? Are you learning embeddings? Is it all part of one neural network? Refer to item 3. This may range from 0.25 pages to 0.5 pages.
+For the paraphrase detection task, the input method can drastically change the performance
+of any implemented model. Ideally, sentence pairs that are more likely to be paraphrased should
+be represented closer in the feature / input space, compared to sentence pairs that have a low
+similarity score. This leads to the problem of tokenization and deciding on the input space,
+which has a vast library of solutions. Bag of Words representations of each word in a sentence would
+be somewhat unreasonable as the vocabulary size is extremely high for our dataset with 50 million 
+sentence pairs. The resulting feature vectors would also be extremely sparse which would significantly
+increase the difficulty of learning, not to mention the large amount of computation required to process 
+a sentence. For our project, we decided to use an embedding model which embeds individual words
+into a reasonably low dimension space considering available compute.
+\bigskip
+
+The FastText 300 dimensional word embedding model trained by Facebook Research on the Common Crawl 
+dataset \textbf{with subword information}. The subword information allows the embedding to effectively
+tokenize words that are rare or out of vocabulary by breaking them down into smaller units for which the
+corresponding embedding vectors get summed up to represent the full word. An example may be:
+\bigskip
+
+\(<\)Impairment\(>\) may be broken down using a 3-gram approach to yield \(<\)Im, Imp, mpa,
+pai, air, irm, rme, ent, nt\(>\). Embeddings for each of these subwords can be added up to 
+create a representation for the full word token. 
+
+\bigskip
+Using this approach helps us avoid out of vocabulary errors when using embeddings. With the FastText
+embedding model, each sentence can be represented as a 2D 300 dimension column wise matrix of all the word tokens
+in it. The simple\_preprocess tokenizer is utilized from the \textbf{gensim} library to tokenize
+sentences into words. A sentence embedding will then have the following format:
+
+\begin{equation}
+S = \begin{pmatrix}
+e_{1,1}   & e_{1,2}   & \cdots & e_{1,n}   \\
+e_{2,1}   & e_{2,2}   & \cdots & e_{2,n}   \\
+\vdots    & \vdots    & \ddots & \vdots    \\
+e_{300,1} & e_{300,2} & \cdots & e_{300,n}
+\end{pmatrix} \in \mathbb{R}^{300 \times n}
+\end{equation}
+
+\noindent where each column \(e_{:,j} \in \mathbb{R}^{300}\) is the FastText embedding of the \(j\)-th word token, and \(n\) is the number of tokens in the sentence.
 
 \section{Implementation}
 
-Omar
+There are multiple architecture types that can be used for detecting the paraphrasing probability
+between two sentences. Primarily, the architecture type needs to be well suited to processing text 
+to extract meaningful abstract features for further processing by a fully connected network. Several
+architecture types were considered:
+\begin{enumerate}
+  \item Transformer: Arguably the most performant architecture for this task as it excels at natural language 
+  processing tasks and has little issues with capturing long term dependencies since it uses attention mechanisms.
+  \item Recurrent Neural Networks (RNNs): Recurrent neural networks are also a good choice for this task since they
+  are able to track somewhat long dependencies as they have a persistent hidden state between each token evaluation.
+  \item 1D Convolutional Neural Networks (CNNs): CNNs are traditionally used for image processing, but may also be used
+  for NLP in their one dimensional form. For this task specifically, it may be possible to use a 2D convolutional
+  network. In general, these are not great at capturing long term dependencies since convolutions work on localized
+  sections of data. 
+\end{enumerate}
 
-Describe your model and implementation here. Refer to item 4. This may take around a page.
+One of the submissions for the Codabench competitions was using a transformer which was fine tuned on 
+the provided dataset. The fine tuned BeRT transformer had an amazing accuracy of 99.17 calculated using the
+accuracy metric \((1 - \text{MSE}) \cdot 100\). Since the project already had a transformer result from
+this submission, we decided to implement the RNN architecture for result diversity. 
+\bigskip
+
+There are many variants of RNN architectures such as encoder-decoder pairs, gated recurrent units (GRU), 
+and long short-term memory (LSTM) networks to name a few. We decided to proceed with the LSTM network 
+architecture for this task since it has more parameters which may allow it to capture more meaningful information 
+about the task from the dataset compared to GRUs or other types which generally consist of fewer training
+parameters. LSTMs aim to solve the long term dependency problem by implementing a hidden state, context vector, and 3 gates
+for input, forget, and output. The individual gates take in the next token and decide what to forget from the 
+context and hidden state vectors which controls what gets "forgotten" and "remembered" for when the next token is processed. An architecture diagram
+for LSTM is shown in Figure \ref{fig:lstm-arch}.
+
+\begin{figure}
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[
+    gate/.style={draw, circle, minimum size=0.88cm, fill=orange!20, font=\small, inner sep=0pt},
+    op/.style={draw, circle, minimum size=0.62cm, fill=white, font=\small, inner sep=0pt},
+    rect/.style={draw, rectangle, minimum width=0.55cm, minimum height=0.38cm,
+                 fill=blue!15, font=\small, inner sep=1pt},
+    >=Stealth, semithick
+  ]
+  %% Cell state ops (y = 2.6)
+  \node[op] (Mf)  at (1.0, 2.6) {$\otimes$};
+  \node[op] (Ac)  at (3.5, 2.6) {$\oplus$};
+  %% Intermediate ops (y = 1.7)
+  \node[op] (Mig) at (3.0, 1.7) {$\otimes$};
+  \node[op] (Tct) at (5.0, 1.7) {tanh};
+  \node[op] (Mo)  at (6.0, 1.7) {$\otimes$};
+  %% Gate row (y = 0.8)
+  \node[gate] (Gf) at (1.0, 0.8) {$\sigma_f$};
+  \node[gate] (Gi) at (2.5, 0.8) {$\sigma_i$};
+  \node[gate] (Gg) at (4.0, 0.8) {$\tanh_g$};
+  \node[gate] (Go) at (6.0, 0.8) {$\sigma_o$};
+  %% Cell state flow
+  \draw[->] (-0.8, 2.6) node[left] {$c_{t-1}$} -- (Mf);
+  \draw[->] (Mf) -- (Ac);
+  \coordinate (ct_br) at (5.0, 2.6);
+  \draw[-]   (Ac) -- (ct_br);
+  \fill (ct_br) circle (2pt);
+  \draw[->]  (ct_br) -- ++(1.0, 0) node[right] {$c_t$};
+  \draw[->]  (ct_br) -- (Tct);
+  %% Gate -> operation connections
+  \draw[->] (Gf)  -- (Mf);
+  \draw[->] (Gi)  -- (Mig);
+  \draw[->] (Gg)  -- (Mig);
+  \draw[->] (Mig) -- (Ac);
+  \draw[->] (Tct) -- (Mo);
+  \draw[->] (Go)  -- (Mo);
+  \draw[->] (Mo)  -- ++(0.8, 0) node[right] {$h_t$};
+  %% Weight matrices U (for h_{t-1}) and W (for x_t)
+  \node[rect] (matU) at (-0.5, -0.55) {$U$};
+  \node[rect] (matW) at (3.5,  -0.55) {$W$};
+  %% Input bus (y = 0.0)
+  \draw[-]  (-0.5, 0.0) -- (6.5, 0.0);
+  \draw[->] (1.0,  0.0) -- (Gf);
+  \draw[->] (2.5,  0.0) -- (Gi);
+  \draw[->] (4.0,  0.0) -- (Gg);
+  \draw[->] (6.0,  0.0) -- (Go);
+  %% h_{t-1} -> U -> bus
+  \draw[->] (-0.5, -1.1) node[below] {$h_{t-1}$} -- (matU);
+  \draw[->] (matU) -- (-0.5, 0.0);
+  \fill (-0.5, 0.0) circle (2pt);
+  %% x_t -> W -> bus
+  \draw[->] (3.5, -1.1) node[below] {$x_t$} -- (matW);
+  \draw[->] (matW) -- (3.5, 0.0);
+  \fill (3.5, 0.0) circle (2pt);
+  %% Dashed cell boundary
+  \draw[dashed, gray!60, rounded corners=4pt]
+    (-1.4, -1.4) rectangle (7.2, 3.1);
+  \node[anchor=south west, gray!70, font=\scriptsize] at (-1.4, 3.1) {LSTM};
+  \end{tikzpicture}%
+  }
+  \caption{LSTM cell. $c_t$: cell state, $h_t$: hidden state, $x_t$: input token.
+    Circles: $\sigma$ (sigmoid), tanh. Operators: $\otimes$ (pointwise multiply),
+    $\oplus$ (pointwise add). Gates $f$, $i$, $g$, $o$ are the forget, input,
+    candidate, and output gates.}
+  \label{fig:lstm-arch}
+\end{figure}
+
+With the embedding dimension being 300 for each token, the input size is \((300 \times 1)\) with the 
+hidden state size being selected as \((200 \times 1)\) for compression and faster training. For the 
+model implemented, we use bi-directional LSTMs with the first LSTM processing tokens in the sentence
+from left to right and the second LSTM processing tokens from right to left in the same manner as a 
+bi-directional RNN. A diagram of the bi-directional LSTM is shown in Figure \ref{fig:bilstm-arch}.
+
+\begin{figure}[h]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[
+    fwd/.style={draw, rounded corners=3pt, minimum width=1.6cm, minimum height=0.65cm,
+                fill=blue!15, font=\small},
+    bwd/.style={draw, rounded corners=3pt, minimum width=1.6cm, minimum height=0.65cm,
+                fill=red!15, font=\small},
+    tok/.style={draw, circle, minimum size=0.7cm, fill=gray!10, font=\small},
+    hid/.style={draw, circle, minimum size=0.7cm, fill=green!10, font=\small},
+    >=Stealth, semithick
+  ]
+  %% --- nodes ---
+  \foreach \t/\xpos in {1/0, 2/3, 3/6}{
+    \node[tok] (x\t) at (\xpos, 0)   {$x_{\t}$};
+    \node[fwd] (f\t) at (\xpos, 1.6) {$\overrightarrow{\text{LSTM}}$};
+    \node[bwd] (b\t) at (\xpos, 3.2) {$\overleftarrow{\text{LSTM}}$};
+    \node[hid] (o\t) at (\xpos, 4.8) {$\hat{h}_{\t}$};
+  }
+  %% --- ellipses ---
+  \foreach \ypos in {0, 1.6, 3.2, 4.8}{
+    \node at (8.2, \ypos) {$\cdots$};
+  }
+  %% --- x_t -> forward LSTM ---
+  \foreach \t in {1,2,3}{ \draw[->] (x\t) -- (f\t); }
+  %% --- x_t -> backward LSTM (curve left, bypassing forward cell) ---
+  \foreach \t in {1,2,3}{
+    \draw[->, dashed] (x\t.west) to[out=130, in=230, looseness=1.5] (b\t.west);
+  }
+  %% --- forward recurrent arrows (left to right, blue) ---
+  \draw[->, blue!70, thick] (f1) -- (f2);
+  \draw[->, blue!70, thick] (f2) -- (f3);
+  \draw[->, blue!70, thick, dashed] (f3.east) -- (7.5, 1.6);
+  %% --- backward recurrent arrows (right to left, red) ---
+  \draw[->, red!70, thick, dashed] (7.5, 3.2) -- (b3.east);
+  \draw[->, red!70, thick] (b3) -- (b2);
+  \draw[->, red!70, thick] (b2) -- (b1);
+  %% --- forward hidden states -> output (curve right to avoid backward LSTM) ---
+  \foreach \t in {1,2,3}{
+    \draw[->] (f\t.east) to[out=50, in=310, looseness=1.3] (o\t.east);
+  }
+  %% --- backward hidden states -> output (straight up, no obstruction) ---
+  \foreach \t in {1,2,3}{
+    \draw[->] (b\t) -- (o\t);
+  }
+  \end{tikzpicture}%
+  }
+  \caption{Bi-directional LSTM architecture. The forward LSTM (blue) processes tokens
+    left-to-right producing $\overrightarrow{h}_t$; the backward LSTM (red) processes
+    right-to-left producing $\overleftarrow{h}_t$. Both receive the same input $x_t$
+    (dashed arrows). The output $\hat{h}_t = [\,\overrightarrow{h}_t \,\|\,
+    \overleftarrow{h}_t\,]$ concatenates both hidden states.}
+  \label{fig:bilstm-arch}
+\end{figure}
+
+Each sentence from the pair are passed through the bi-directional LSTM
+and their hidden states get concatenated to form an \((800 \times 1)\)
+vector that is passed to a fully connected network with 800, 400, 200, 100 and 
+1 inputs per layer with the final layer containing the paraphrasing score. 
+
+The model was initialized to random parameter values with the following training
+procedure:
+
+\begin{itemize}
+  \item Huber Loss Function (\(\delta\) is a hyper-param) : \[L_{\delta}(a) = \begin{cases}
+    \frac{1}{2}a^2 & |a| \le \delta\\
+    \delta \cdot (|a| - \frac{1}{2}\delta) & \text{else.}\\
+  \end{cases} \]
+  \item Adam Optimizer with learning rate \(\alpha = 0.004\) for 20 epochs.
+  \item Dataset used: 1,000,000 subset from the 50,000,000 full dataset with 
+  the following split:
+    \begin{itemize}
+      \item Training set: 70\% (700,000) samples.
+      \item Validation set: 10\% (100,000) samples.
+      \item Training set: 20\% (200,000) samples. 
+    \end{itemize} 
+  \item Dropout between FCN layers with probability 0.2.
+\end{itemize}
+
+The small subset was taken due to compute constraints. Training yielded the training
+and validation loss curves shown in Figure \ref{fig:loss-plot-lstm}. When comparing on
+Codabench, this model outperforms all of our baselines (majority and random) achieving
+93.6.
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\linewidth]{loss_plot.png}
+  \caption{Training and Validation loss vs Training Epoch for Bi-LSTM model.}
+  \label{fig:loss-plot-lstm}
+\end{figure}
+
 
 
 \section{Evaluation}
 
-Sathurshan
+Sathurshan 
+Note: Please mention loss function for training and separate evaluation for codabench - Omar.
+
+
 
 \section{Comparison to Others}
 
