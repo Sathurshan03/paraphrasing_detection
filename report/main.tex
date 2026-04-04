@@ -316,7 +316,7 @@ The model was initialized to random parameter values with the following training
 procedure:
 
 \begin{itemize}
-  \item Huber Loss Function (\(\delta\) is a hyper-param) : \[L_{\delta}(a) = \begin{cases}
+  \item Huber Loss Function (\(\delta\) is a hyper-param) \label{eq:humber} : \[L_{\delta}(a) = \begin{cases}
     \frac{1}{2}a^2 & |a| \le \delta\\
     \delta \cdot (|a| - \frac{1}{2}\delta) & \text{else.}\\
   \end{cases} \]
@@ -347,10 +347,36 @@ Codabench, this model outperforms all of our baselines (majority and random) ach
 
 \section{Evaluation}
 
-Sathurshan 
-Note: Please mention loss function for training and separate evaluation for codabench - Omar.
+The dataset was split into training, validation, and testing sets comprising
+70\% (700,000 samples), 10\% (100,000 samples), and 20\% (200,000 samples), respectively.
+The original score distribution, shown in Figure \ref{fig:score-distribution}, 
+is skewed toward higher scores for the first 1,000,000 datapoints of ParaMt-50M.
 
+To ensure a fair evaluation, a balanced dataset was constructed.
+Specifically, the first 10 million datapoints from ParaMt-50M were sampled,
+and 100,000 samples were selected from each bin of width 0.01.
+This process resulted in a more uniform distribution across score ranges,
+as illustrated in Figure \ref{fig:score-distribution_balanced}.
+The same 70/10/20 split for training, validation, and testing was
+maintained on this balanced dataset.
+ 
 
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{score_distribution_balanced.png}
+    \caption{Distribution of balanced paraphrase scores used for evaluation.}
+    \label{fig:score-distribution_balanced}
+\end{figure}
+
+Model performance was evaluated using a custom accuracy metric based on
+mean squared error (MSE), defined as:
+
+$Score = (1.0 - MSE(y_{true}, y_{prediction})) * 100.0$
+
+A perfect prediction (MSE = 0) yields a score of 100\%.
+
+Additionally, the \hyperref[eq:humber]{Humber loss function} was used
+during training to monitor model performance over time.
 
 \section{Comparison to Others}
 
@@ -358,17 +384,56 @@ Kalp
 
 \section{Error Analysis}
 
-Sathurshan
 
-What kind of errors are your models making? This doesn't have to be super complicated. Confusion matrices are great. Qualitative observations are also great. This means looking at many cases where your model is wrong (wrong class or high error) and looking for patterns yourself. What about the text might be giving it difficulty? Qualitative analysis is underappreciated and can often give you great insight into issues with your model. Examples are useful here. Refer to item 7. This may be around a half page.
+
+Initially, when training on the skewed dataset shown in Figure \ref{fig:score-distribution},
+the model performed worse than the majority baseline. This is expected, as the dataset
+contains significantly more datapoints with scores close to 1 and relatively few
+with scores near 0. Consequently, the model failed to learn effectively
+across the full range of score variations.
+
+However, after updating the dataset to a more uniform distribution,
+as shown in Figure \ref{fig:score-distribution_balanced}, model performance improved
+substantially. The updated model outperformed both the majority baseline and
+the previous model trained on the skewed dataset, achieving an improvement of 8\%.
+
+Furthermore, the model performs worse when evaluating longer text pairs
+compared to shorter ones. This is because longer texts contain more semantic
+content and complexity, requiring the model to capture and compare multiple
+semantical meaning. As a result, generating a single similarity score
+becomes more challenging, leading to reduced performance on longer sequences.
 
 \section{Conclusions}
 
-Summarize your work briefly. Reflect on your implementation and areas for improvement. What do you suggest people work on next (mentioned also in item 7)? This should likely be less than 0.25 pages.
+In this project, paraphrase detection was studied as a regression task, where the goal
+was to predict a continuous similarity score between pairs of sentences.
+Using a subset of the ParaNMT-50M dataset, a bi-directional LSTM model
+combined with FastText embeddings was implemented to capture both word-level
+and contextual semantic information. The model successfully learned meaningful
+sentence representations and achieved strong performance, outperforming
+baseline approaches.
+
+A key finding of this work is the significant impact of dataset distribution
+on model performance. Training on the original skewed dataset led to poor
+generalization, particularly across lower similarity scores. By constructing
+a balanced dataset, the model was able to learn more effectively across the
+full score range. This highlights the importance of considering label
+distribution, even in regression settings.
+
+Overall, the results demonstrate that the proposed approach is effective
+for paraphrase scoring under constrained computational resources.
+However, there are several opportunities for future improvement,
+including leveraging transformer-based architectures, incorporating
+sentence-level embedding models, and exploring more robust methods
+for handling long sequences and semantic composition.
 
 \section*{Team Contributions}
 
-Write in this section a few sentences describing the contributions of each team member. What did each member work on? Refer to item 8.
+Omar Alam worked on training on the model and writing the Features and Inputs, and Implementation sections.
+Sathurshan Arulmohan worked on writing Evaluation, Error Analysis, Conclusion sections and project managing.
+Jay Sharma worked on dataset split and writing the Introduction, Related Work and Datset sections.
+Kalp Shah worked on writing Comparison to Others sections and managing Codabench by helping others
+and debugging issues that arises.
 
 \begin{thebibliography}{}
 
