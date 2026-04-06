@@ -15,8 +15,9 @@
 % This assumes your files are encoded as UTF8
 \usepackage[utf8]{inputenc}
 \usepackage{microtype}
-\usepackage{inconsolata}
+\IfFileExists{inconsolata.sty}{\usepackage{inconsolata}}{}
 \usepackage{graphicx}
+\usepackage{tabularx}
 \setcitestyle{numbers,square}
 \usepackage{amsmath}
 \usepackage{amssymb}
@@ -85,6 +86,7 @@ Paraphrase detection is the task of determining whether two pieces of text expre
 In this project, we study paraphrase detection as a regression problem. Given two tokenized English sentences, the model predicts a score between 0 and 1 that represents how strongly the sentences paraphrase each other. A low score indicates little semantic overlap, while a high score indicates that the two sentences communicate nearly the same idea. To support this task, we use a subset of the ParaNMT-50M dataset, which provides large numbers of sentence pairs with similarity scores. Our overall goal is to build and evaluate models that can learn both word-level similarity and deeper semantic relationships, allowing the system to assign reliable paraphrase scores to unseen sentence pairs.
 
 \section{Related Work}
+\label{sec:related-work}
 Past work on paraphrase detection usually looks at the problem in two ways: either deciding if two sentences are paraphrases or giving them a similarity score. One of the best-known datasets in this area is the Microsoft Research Paraphrase Corpus \cite{dolan-brockett-2005}. A closely related area is semantic textual similarity (STS), where the goal is to predict how similar two sentences are on a scale instead of making a yes-or-no decision \cite{cer-etal-2017-semeval}. This is especially relevant to our project because we also treat the problem as score prediction. These works show that paraphrase detection is not just about matching words. Two sentences may use different wording and still mean the same thing.
 
 Another important area of related work is sentence embeddings. Back-translated text has been used to create large paraphrase datasets for learning sentence representations \cite{wieting-etal-2017-learning}. ParaNMT-50M, which we use in this project, builds on that idea \cite{wieting-gimpel-2018-paranmt}. More recent methods use transformer models to create better sentence embeddings. Sentence-BERT made it easier to compare whole sentences using cosine similarity \cite{reimers-gurevych-2019-sentence}, and SimCSE further improved sentence representation quality using contrastive learning \cite{gao-etal-2021-simcse}. No previous paper matches our exact project setup, but these papers are the closest to what we are doing because they focus on paraphrase datasets, similarity scoring, and sentence-level meaning.
@@ -147,6 +149,7 @@ e_{300,1} & e_{300,2} & \cdots & e_{300,n}
 \noindent where each column \(e_{:,j} \in \mathbb{R}^{300}\) is the FastText embedding of the \(j\)-th word token, and \(n\) is the number of tokens in the sentence.
 
 \section{Implementation}
+\label{sec:implementation}
 
 There are multiple architecture types that can be used for detecting the paraphrasing probability
 between two sentences. Primarily, the architecture type needs to be well suited to processing text 
@@ -346,6 +349,7 @@ Codabench, this model outperforms all of our baselines (majority and random) ach
 
 
 \section{Evaluation}
+\label{sec:evaluation}
 
 The dataset was split into training, validation, and testing sets comprising
 70\% (700,000 samples), 10\% (100,000 samples), and 20\% (200,000 samples), respectively.
@@ -380,11 +384,89 @@ during training to monitor model performance over time.
 
 \section{Comparison to Others}
 
-Kalp
+A central question for this project is how our approach compares not only to simple baselines but also to other groups working on the same task under similar constraints. Table~\ref{tab:comparison-others} summarizes results using the same Codabench-style metric defined in Section~\ref{sec:evaluation}, namely $\text{Score} = (1 - \mathrm{MSE}(y_{\mathrm{true}}, y_{\mathrm{pred}})) \times 100$, so that higher values correspond to lower mean squared error between predicted and gold similarity scores.
+
+\begin{table}[t]
+  \centering
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\columnwidth}{@{}>{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X c@{}}
+    \hline
+    \textbf{Method} & \textbf{Category} & \textbf{Score (\%)} \\
+    \hline
+    Majority baseline (mean label) & Simple baseline & $\approx 91.6$ \\
+    \hline
+    Bi-LSTM + FastText + FC head (ours) & Our approach & 93.6 \\
+    \hline
+    Fine-tuned RoBERTa (another group) & Classmate method & 99.17 \\
+    \hline
+  \end{tabularx}
+  \caption{Comparison of paraphrase scoring methods on the shared evaluation setup. Scores use $(1-\mathrm{MSE})\times 100$ as in Section~\ref{sec:evaluation}. The majority baseline figure reflects evaluation on the balanced split of ParaNMT-style data; neural models were evaluated under the same metric on Codabench.}
+  \label{tab:comparison-others}
+\end{table}
+
+As described in Section~\ref{sec:implementation}, our system encodes 
+each sentence with FastText subword embeddings, passes each sentence 
+through a bi-directional LSTM, concatenates the final hidden 
+representations for the pair, and regresses a scalar score through 
+a small fully connected stack trained with Huber loss. This architecture 
+is deliberately lighter than a transformer: it was chosen partly to 
+diversify the set of solutions in the course and to stay within our 
+compute budget, while still learning non-trivial functions of the 
+input rather than predicting a single global mean. 
+
+A different team in the course fine-tuned a RoBERTa model (a pretrained 
+transformer encoder) on the same paraphrase regression task and 
+submitted their model to Codabench. RoBERTa builds on the BERT 
+family but uses improved pretraining recipes and remains a strong 
+general-purpose encoder for sentence-level NLP. In their setup, the 
+model can attend over all token positions in both sentences jointly 
+(depending on how the pair is formatted), and it benefits from 
+large-scale language modeling on text corpora before any task-specific 
+fine-tuning. That combination typically yields rich contextual 
+representations that go well beyond bag-of-embeddings or 
+fixed-window recurrence. 
+
+We also include the majority baseline from Section~\ref{sec:evaluation},
+ which always predicts the mean training label. It does not read 
+ the sentences at all; it merely minimizes squared error among 
+ \emph{constant} predictors. Its score in the high 80s--low 90s 
+ under $(1-\mathrm{MSE})\times 100$ is therefore not analogous to 
+ 'accuracy' in classification: as discussed when interpreting 
+ regression metrics, even a trivial mean predictor can achieve 
+ a seemingly high number because the metric is bounded and rewards 
+ any reduction in average squared deviation from the global mean. 
+
+So are these results what we expected? Broadly, yes. 
+The ordering in Table~\ref{tab:comparison-others} matches 
+standard expectations for modern NLP: a strong pretrained 
+transformer with task-specific fine-tuning (the classmate 
+RoBERTa system) achieves the strongest score, our recurrent 
+model sits clearly above the non-input baseline but below the 
+transformer, and the majority baseline trails the neural methods 
+despite its deceptively high raw percentage. The gap between 
+our Bi-LSTM (93.6\%) and RoBERTa (99.17\%) is large in 
+absolute percentage points but is consistent with known 
+differences in representational capacity, pretraining, and 
+the ability of self-attention to model long-range and subtle 
+semantic contrasts that are hard for a finite-width LSTM to 
+capture from word embeddings alone. The smaller gap between 
+the majority baseline and our Bi-LSTM reflects that moving 
+from a constant predictor to a model that actually conditions 
+on the sentence pair yields real gains on the regression task, 
+even though the metric's scale makes all numbers look superficially 
+high. 
+
+In the end, we did not expect our model to match a state-of-the-art 
+fine-tuned transformer; the main takeaway for us is that there 
+remains substantial headroom on this benchmark, and that 
+architecture choice (recurrent vs.\ transformer) and pretraining 
+matter greatly for paraphrase scoring, which is in line with the related 
+work surveyed in Section~\ref{sec:related-work}. 
+
+
 
 \section{Error Analysis}
-
-
 
 Initially, when training on the skewed dataset shown in Figure \ref{fig:score-distribution},
 the model performed worse than the majority baseline. This is expected, as the dataset
