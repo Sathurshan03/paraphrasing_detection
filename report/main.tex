@@ -30,7 +30,7 @@
 %
 % and set <dim> to something 5cm or larger.
 
-\title{Group X Progress Report:\\My Group's Project Name}
+\title{Group 45 Progress Report:\\Paraphrasing Detection}
 
 
 \author{Omar Alam, Sathurshan Arulmohan, Kalp Shah, Jay Sharma \\
@@ -121,7 +121,7 @@ a sentence. For our project, we decided to use an embedding model which embeds i
 into a reasonably low dimension space considering available compute.
 \bigskip
 
-The FastText 300 dimensional word embedding model trained by Facebook Research on the Common Crawl 
+The FastText 300 dimensional word embedding model is trained by Facebook Research on the Common Crawl 
 dataset \textbf{with subword information}. The subword information allows the embedding to effectively
 tokenize words that are rare or out of vocabulary by breaking them down into smaller units for which the
 corresponding embedding vectors get summed up to represent the full word. An example may be:
@@ -167,7 +167,7 @@ architecture types were considered:
 \end{enumerate}
 
 One of the submissions for the Codabench competitions was using a transformer which was fine tuned on 
-the provided dataset. The fine tuned BeRT transformer had an amazing accuracy of 99.17 calculated using the
+the provided dataset. The fine tuned BERT transformer had an amazing accuracy of 99.17 calculated using the
 accuracy metric \((1 - \text{MSE}) \cdot 100\). Since the project already had a transformer result from
 this submission, we decided to implement the RNN architecture for result diversity. 
 \bigskip
@@ -319,7 +319,7 @@ The model was initialized to random parameter values with the following training
 procedure:
 
 \begin{itemize}
-  \item Huber Loss Function (\(\delta\) is a hyper-param) \label{eq:humber} : \[L_{\delta}(a) = \begin{cases}
+  \item Huber Loss Function (\(\delta\) is a hyper-param) \label{eq:huber} : \[L_{\delta}(a) = \begin{cases}
     \frac{1}{2}a^2 & |a| \le \delta\\
     \delta \cdot (|a| - \frac{1}{2}\delta) & \text{else.}\\
   \end{cases} \]
@@ -329,7 +329,7 @@ procedure:
     \begin{itemize}
       \item Training set: 70\% (700,000) samples.
       \item Validation set: 10\% (100,000) samples.
-      \item Training set: 20\% (200,000) samples. 
+      \item Test set: 20\% (200,000) samples. 
     \end{itemize} 
   \item Dropout between FCN layers with probability 0.2.
 \end{itemize}
@@ -354,9 +354,9 @@ Codabench, this model outperforms all of our baselines (majority and random) ach
 The dataset was split into training, validation, and testing sets comprising
 70\% (700,000 samples), 10\% (100,000 samples), and 20\% (200,000 samples), respectively.
 The original score distribution, shown in Figure \ref{fig:score-distribution}, 
-is skewed toward higher scores for the first 1,000,000 datapoints of ParaMt-50M.
+is skewed toward higher scores for the first 1,000,000 datapoints of ParaNMt-50M.
 
-To ensure a fair evaluation, a balanced dataset was constructed.
+To ensure a fair evaluation, a balanced dataset was constructed for a second training run.
 Specifically, the first 10 million datapoints from ParaMt-50M were sampled,
 and 100,000 samples were selected from each bin of width 0.01.
 This process resulted in a more uniform distribution across score ranges,
@@ -379,7 +379,7 @@ $Score = (1.0 - MSE(y_{true}, y_{prediction})) * 100.0$
 
 A perfect prediction (MSE = 0) yields a score of 100\%.
 
-Additionally, the \hyperref[eq:humber]{Humber loss function} was used
+Additionally, the \hyperref[eq:huber]{Huber loss function} was used
 during training to monitor model performance over time.
 
 \section{Comparison to Others}
@@ -396,7 +396,7 @@ A central question for this project is how our approach compares not only to sim
     \hline
     Majority baseline (mean label) & Simple baseline & $\approx 91.6$ \\
     \hline
-    Bi-LSTM + FastText + FC head (ours) & Our approach & 93.6 \\
+    Bi-LSTM + FastText + FC head (ours) & Our approach & 93.6 (Balanced Dataset Model) \\
     \hline
     Fine-tuned RoBERTa (another group) & Classmate method & 99.17 \\
     \hline
@@ -430,7 +430,7 @@ fixed-window recurrence.
 We also include the majority baseline from Section~\ref{sec:evaluation},
  which always predicts the mean training label. It does not read 
  the sentences at all; it merely minimizes squared error among 
- \emph{constant} predictors. Its score in the high 80s--low 90s 
+ \emph{constant} predictors. Its score in the low 90s 
  under $(1-\mathrm{MSE})\times 100$ is therefore not analogous to 
  'accuracy' in classification: as discussed when interpreting 
  regression metrics, even a trivial mean predictor can achieve 
@@ -482,7 +482,7 @@ the previous model trained on the skewed dataset, achieving an improvement of 8\
 Furthermore, the model performs worse when evaluating longer text pairs
 compared to shorter ones. This is because longer texts contain more semantic
 content and complexity, requiring the model to capture and compare multiple
-semantical meaning. As a result, generating a single similarity score
+semantic meanings. As a result, generating a single similarity score
 becomes more challenging, leading to reduced performance on longer sequences.
 
 \section{Conclusions}
@@ -511,11 +511,16 @@ for handling long sequences and semantic composition.
 
 \section*{Team Contributions}
 
-Omar Alam worked on training on the model and writing the Features and Inputs, and Implementation sections.
-Sathurshan Arulmohan worked on writing Evaluation, Error Analysis, Conclusion sections and project managing.
-Jay Sharma worked on dataset split and writing the Introduction, Related Work and Datset sections.
-Kalp Shah worked on writing Comparison to Others sections and managing Codabench by helping others
-and debugging issues that arises.
+\begin{itemize}
+  \item Omar Alam worked on training on the model and writing the Features and Inputs, and Implementation sections.
+  \item Sathurshan Arulmohan worked on writing Evaluation, Error Analysis, Conclusion sections and project managing.
+  \item Jay Sharma worked on dataset split and writing the Introduction, Related Work and Dataset sections.
+  \item  Kalp Shah worked on writing Comparison to Others sections and managing Codabench by helping others
+and debugging issues that arose.
+\end{itemize}
+
+
+
 
 \begin{thebibliography}{}
 
