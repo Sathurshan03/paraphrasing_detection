@@ -337,7 +337,7 @@ procedure:
 The small subset was taken due to compute constraints. Training yielded the training
 and validation loss curves shown in Figure \ref{fig:loss-plot-lstm}. When comparing on
 Codabench, this model outperforms all of our baselines (majority and random) achieving
-93.6.
+93.6 on the balanced dataset.
 
 \begin{figure}
   \centering
@@ -354,10 +354,10 @@ Codabench, this model outperforms all of our baselines (majority and random) ach
 The dataset was split into training, validation, and testing sets comprising
 70\% (700,000 samples), 10\% (100,000 samples), and 20\% (200,000 samples), respectively.
 The original score distribution, shown in Figure \ref{fig:score-distribution}, 
-is skewed toward higher scores for the first 1,000,000 datapoints of ParaNMt-50M.
+is skewed toward higher scores for the first 1,000,000 datapoints of ParaNMT-50M.
 
 To ensure a fair evaluation, a balanced dataset was constructed for a second training run.
-Specifically, the first 10 million datapoints from ParaMt-50M were sampled,
+Specifically, the first 10 million datapoints from ParaNMT-50M were sampled,
 and 100,000 samples were selected from each bin of width 0.01.
 This process resulted in a more uniform distribution across score ranges,
 as illustrated in Figure \ref{fig:score-distribution_balanced}.
@@ -445,7 +445,7 @@ RoBERTa system) achieves the strongest score, our recurrent
 model sits clearly above the non-input baseline but below the 
 transformer, and the majority baseline trails the neural methods 
 despite its deceptively high raw percentage. The gap between 
-our Bi-LSTM (93.6\%) and RoBERTa (99.17\%) is large in 
+our Bi-LSTM (Balanced Dataset Model) (93.6\%) and RoBERTa (99.17\%) is large in 
 absolute percentage points but is consistent with known 
 differences in representational capacity, pretraining, and 
 the ability of self-attention to model long-range and subtle 
